@@ -254,6 +254,22 @@ RUSH_FRAMES = [
     ],
 ]
 
+WIFI_ON = [
+    "..x..",
+    ".x.x.",
+    "x.x.x",
+    ".x.x.",
+    "..x..",
+]
+
+WIFI_OFF = [
+    ".....",
+    ".....",
+    ".....",
+    ".....",
+    "..x..",
+]
+
 LOG_PATH = "/home/daniel/oled/logs/rush.log"
 USE_BITCOIN_NODE = True
 BITCOIN_CLI = "bitcoin-cli"   # or "/usr/local/bin/bitcoin-cli" if needed
@@ -377,16 +393,10 @@ def has_wifi_ip():
 
 def draw_wifi_icon(d, x, y, ok=True):
     """
-    Tiny 8x8 wifi-ish glyph. ok=False shows an 'X' mark.
+    Draw WiFi icon using sprite frames instead of procedural pixels.
     """
-    if not ok:
-        d.line((x+1, y+1, x+6, y+6), 1)
-        d.line((x+6, y+1, x+1, y+6), 1)
-        return
-    # simple arcs + dot
-    d.point((x+3, y+6), 1)
-    d.point((x+2, y+5), 1); d.point((x+4, y+5), 1)
-    d.point((x+1, y+4), 1); d.point((x+5, y+4), 1)
+    frame = WIFI_ON if ok else WIFI_OFF
+    draw_sprite(d, x, y, frame)
 
 def watchdog_ping():
     #only matters when running undersystemd with type=notify
@@ -620,7 +630,7 @@ def main():
         big_font = font
 
     # Start the background hasher
-    hasher = LotteryHasher(target_leading_zero_bits=20, batch_size=2000)
+    hasher = LotteryHasher(target_leading_zero_bits=25, batch_size=2000)
     hasher.start()
 
     # register shutdown handlers
@@ -671,7 +681,7 @@ def main():
     panic_until = 0.0
     next_panic_roll = time.time() + 120.0
     PANIC_CHANCE = 0.50          # tweak: chance each roll (0.35 = 35%)
-    PANIC_DURATION = 4.0         # seconds the panic animation plays
+    PANIC_DURATION = 16.0         # seconds the panic animation plays
 
     # Daily schedule toggles (reset at midnight)
     sched_day = time.strftime("%Y-%m-%d")
@@ -699,7 +709,7 @@ def main():
     FPS_BY_MODE = {
         "work":     1.0,
         "rest":     1.0,
-        "found":    6.0,
+        "found":    3.0,
         "morning":  1.0,
         "clean":    3.0,
         "alien":    1.0,
@@ -837,10 +847,10 @@ def main():
             # flash FOUND when it increments
             if found != last_found:
                 last_found = found
-                found_flash_until = now + 2.0
+                found_flash_until = now + 4.0
 
             # Status: only flash FOUND, otherwise show nothing
-            status_msg = "FOUND!!!" if now < found_flash_until else ""
+            status_msg = "" #reserved for future statuses
 
             # Draw UI
             img = Image.new("1", (128, 64), 0)
@@ -972,24 +982,22 @@ def main():
             d.rectangle(status_bar, outline=1, fill=0)
             d.rectangle(miner_box, outline=1, fill=0)
 
-            # Icons / mini info in status bar
+            # -----------------------------
+            # STATUS BAR (icons only)
+            # -----------------------------
             sbx0, sby0, sbx1, sby1 = status_bar
             icon_y = sby0 + 2
 
-            # Weather
+            # Weather icon (left)
             draw_weather_icon(d, sbx0 + 2, icon_y, weather)
 
-            # WiFi
+            # WiFi icon (center)
             draw_wifi_icon(d, sbx0 + 14, icon_y + 1, ok=wifi_ok)
 
-            # Temperature
-            draw_temp_icon(d, sbx0 + 24, icon_y + 1, level=temp_level)
-
-            # Status (FOUND vs SEARCH)
-            draw_status_icon(d, sbx0 + 33, icon_y + 1, status_msg if status_msg else "SEARCH")
-
-            # Tiny wins count on the right side of the status bar
-            d.text((sbx1 - 18, icon_y), f"W{found}", fill=1, font=font)
+            # CPU temperature (numeric, right)
+            # temp_c is already calculated elsewhere in the script
+            temp_txt = f"{int(cpu_temp_c)}°"
+            d.text((sbx1 - 18, icon_y), temp_txt, fill=1, font=font)
 
             # Environment + Rush
             anchors = draw_nostromo_env(d, miner_box, now, night, weather)

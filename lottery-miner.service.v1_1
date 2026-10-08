@@ -1,0 +1,32 @@
+# COMMENTED OUT WATCHDOG BECAUSE IT WAS TIMING OUT
+[Unit]
+Description=Lottery Miner OLED UI
+After=wifi-provision.service network-online.target
+Wants=wifi-provision.service network-online.target
+
+[Service]
+Type=simple
+#NotifyAccess=all
+
+User=daniel
+WorkingDirectory=/home/daniel/oled
+ExecStart=/home/daniel/oled/start_lottery.sh
+
+# Restart if it crashes
+Restart=always
+RestartSec=2
+StartLimitIntervalSec=60
+StartLimitBurst=10
+
+# Send logs to journal (view with journalctl)
+StandardOutput=journal
+StandardError=journal
+
+# watchdog; app pings systemd at least tis often
+#WatchdogSec=10
+
+# Nice-to-have: give it time to shut down cleanly
+TimeoutStopSec=10
+
+[Install]
+WantedBy=multi-user.target
